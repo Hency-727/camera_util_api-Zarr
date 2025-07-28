@@ -1,0 +1,38 @@
+
+# config.yaml
+
+# Mode, optional "record" or "play"
+# In recording mode, please set mode to "record" and set sensor_name, category, num_frames, compress_level
+# In playback mode, please set mode to "play" and set sensor_name, category, dataset_name
+mode: is_multi
+
+camera_mode: record                      # record or play
+default_sensor: gelsight_mini                    # default sensor name
+category_type: "visual"                  # catagory: visual, piezoresistance
+camera_index: 0                          # camera indexes, defalut: /dev/video0
+camera_index_1: 0
+camera_index_2: 2                        
+play_path:
+is_single:
+  record:
+    sensor_name: ${default_sensor}       
+    category: ${category_type}              
+    num_frames: 500
+    compress_level: 3
+    camera_index: ${camera_index}                   
+
+is_multi:
+  record:
+    sensor_num: 2
+    sensor_name_1: "d435i"       
+    sensor_name_2: "gelsight_mini"       
+    category: ${category_type}               
+    num_frames: 500
+    compress_level: 3
+    camera_index_1: ${camera_index_1}                    
+    camera_index_2: ${camera_index_2}                    
+
+play:
+  play_path: ${play_path}
+  delay_ms: 30
+  session_id: 1
