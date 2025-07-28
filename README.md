@@ -68,13 +68,10 @@ data/multi_cameras/
 
 ```
 ### camera playing mode
-```python
-
-```
 ``` python
 # run at camera_util_api directory and play camera frames
 python scripts/main_play.py \
-    play_path=${.zarr_path} \
+    play_path=${.zarr_path} 
 ```
 
 ### self-defined
@@ -92,7 +89,8 @@ camera_index_2: 2
 # main function
 from omegaconf import OmegaConf
 from utils.camera_driver import main
-# from utils.multi_camera_driver import main # -> multi camera mode
+# from utils.multi_camera_driver import main # -> multi cameras recording mode
+# from utils.camera_driver import play_frame # -> play mode
 
 if __name__ == "__main__":
     # 1. load config from config.yaml
@@ -103,4 +101,5 @@ if __name__ == "__main__":
     cfg = OmegaConf.merge(cfg, cli_cfg)
     # print(cfg)
     main(cfg)
+    # play_frame(cfg)
 ```
