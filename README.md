@@ -1,5 +1,5 @@
 
-# camera_util_api-Zarr
+# easy_camera_api-Zarr
 this repo includes a demo to collect zarr-format dataset from one camera or multi cameras with timestamps
 ## what does this repo do?
 this repository provides a flexible Python toolkit for capturing one or more camera streams, storing the frames efficiently in Zarr format with configurable compression, and later playing them back. It uses OpenCV for video I/O, Zarr + Blosc for fast, chunked storage, and OmegaConf for easy CLI-based configuration of recording and playback parameters.
