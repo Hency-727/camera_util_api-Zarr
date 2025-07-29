@@ -1,7 +1,7 @@
 '''
 Author: Hengxiangchen-Hency
 Date: 2025-07-25 15:18:52
-LastEditTime: 2025-07-28 19:19:30
+LastEditTime: 2025-07-29 19:41:56
 LastEditors: HencyCHEN
 Description: Demo to record one camera frames to zarr /play zarr-format videos
 '''
@@ -15,11 +15,12 @@ from threading import Event, Thread
 import queue
 import time
 import sys, select, termios, tty
-
+import numpy as np
+from realsense_driver import RealsenseDriver
 class CameraDriver:
-    def __init__(self, camera_index: int = 0, is_play_mode: bool = False, is_single_camera: bool = True):
+    def __init__(self, camera_index: int = 0, is_play_mode: bool = False, is_single_camera: bool = True, is_realsense: bool = True):
         self.camera_index = camera_index
-
+        self.is_realsense = is_realsense
         self.cmd_queue = queue.Queue()
         self._stop_event = Event()  # set to stop recording event
         self.is_play_mode = is_play_mode
@@ -27,10 +28,12 @@ class CameraDriver:
             print(f"============= Record mode, Init camera {self.camera_index}=============") 
             if is_single_camera:
                 self.check_running()
+            if is_realsense:
+                self.realsense = RealsenseDriver()
     def record_single_camera_to_zarr(self,
         output_zarr_path: str,
         num_frames: int = 500,
-        compress_level: int = 3,
+        compress_level: int = 3
         # error_queue = None
     ):
         t = Thread(target=self.thread_monitor, daemon=True)
@@ -49,10 +52,17 @@ class CameraDriver:
         compress_level,
         # error_queue = None
     ):
-        try:  
-            ret, frame = self.cap.read()
-            if not ret:
-                self.cap.release()
+        try:
+            if self.is_realsense:
+                realsense = RealsenseDriver()
+                frame = realsense.pipeline.wait_for_frames().get_color_frame()
+                if not frame:
+                    print("No frame from realsense")
+                    realsense.pipeline.stop()
+            else:
+                ret, frame = self.cap.read()
+                if not ret:
+                    self.cap.release()
             
             h, w, c = frame.shape
 
@@ -84,7 +94,12 @@ class CameraDriver:
 
             while not self._stop_event.is_set():
   
-                ret, frame = self.cap.read()
+                if self.is_realsense:
+                    frame = realsense.pipeline.wait_for_frames().get_color_frame()
+                    frame = np.asanyarray(frame.get_data())
+                else:
+                    ret, frame = self.cap.read()
+                
                 current_time = time.time()
 
                 """ Caclculate FPS """
@@ -127,6 +142,7 @@ class CameraDriver:
                     print(f"unknown command : {cmd}")    
                 if i >= num_frames:
                     break
+
             self.release()
             print(f"Collecting {i} frames into {output_zarr_path}")
 
@@ -139,12 +155,22 @@ class CameraDriver:
         # self._stop_event.set()
         self.cmd_queue.put('stop')
     def check_running(self) -> bool:
-        self.cap = cv2.VideoCapture(self.camera_index)
-        if not self.cap.isOpened():
-            return False
+
+        if self.is_realsense:
+            frame = self.realsense.pipeline.wait_for_frames().get_color_frame()
+            if not frame:
+                print("No frame from realsense")
+                return False
+            else:
+                return True    
+
         else:
-            print(f"open camera {self.camera_index}")
-            return True
+            self.cap = cv2.VideoCapture(self.camera_index)
+            if not self.cap.isOpened():
+                return False
+            else:
+                print(f"open camera {self.camera_index}")
+                return True
     
     def thread_monitor(self):
         # switch the terminal to character mode
@@ -174,7 +200,10 @@ class CameraDriver:
             return sys.stdin.read(1)
         return None
     def release(self):
-        self.cap.release()
+        if self.is_realsense:
+            self.realsense.pipeline.stop()
+        else:
+            self.cap.release()
         # cv2.destroyAllWindows()
         # time.sleep(2)
     def read_and_play_zarr_visual(
@@ -212,7 +241,7 @@ def main(cfg: DictConfig):
     """ Record Mode """
     if cfg.camera_mode == "record":
         if cfg.mode == "is_single":
-            driver = CameraDriver(camera_index=cfg.is_single.record.camera_index, is_single_camera=cfg.mode)
+            driver = CameraDriver(camera_index=cfg.is_single.record.camera_index, is_single_camera=cfg.mode, is_realsense=cfg.is_multi.record.REALSENSE)
             out_dir = os.path.join("data", "single_camera", cfg.is_single.record.sensor_name, cfg.is_single.record.category)
             os.makedirs(out_dir, exist_ok=True)
             """ Automatically detect existing .zarr session folders and generate the next three-digit number """

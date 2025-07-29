@@ -31,6 +31,7 @@ is_multi:
     compress_level: 3
     camera_index_1: ${camera_index_1}                    
     camera_index_2: ${camera_index_2}                    
+    REALSENSE:      ${is_realsense:${is_multi.record.sensor_name_1}}
 
 play:
   play_path: ${play_path}

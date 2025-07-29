@@ -1,7 +1,7 @@
 '''
 Author: HencyCHEN
 Date: 2025-07-27 16:03:14
-LastEditTime: 2025-07-28 19:13:53
+LastEditTime: 2025-07-29 19:42:24
 LastEditors: HencyCHEN
 Description: Demo to record multi cameras frames with timestamps to zarr /play zarr-format videos
 '''
@@ -15,25 +15,28 @@ import sys, termios, tty
 
 
 class MultiCameraDriver(CameraDriver):
-    def __init__(self, camera_indices: list):
+    def __init__(self, camera_indices: list, is_realsense: bool = True):
         """ Set up multi cameras """
         self.camera_indices = camera_indices
+        self.is_realsense = is_realsense
         self.open_nobug = []
         self.cameras = [CameraDriver(camera_index, is_single_camera=False) for camera_index in camera_indices]
         self.check_multi_camera_running()
     def check_multi_camera_running(self) -> bool:
+
         """ check if cameras open successfully """
         for camera in self.cameras:
             self.open_nobug.append(camera.check_running())
         print(self.open_nobug)
+
         for i, camera in enumerate(self.cameras):
             if not self.open_nobug[i]:
+                self.cameras[i].release()
                 for i, camera in enumerate(self.cameras):
                     camera.release()
                     print(f"============== Release Camera {camera.camera_index} ==============")
             elif i == 1:        
                 print("============== All cameras are opened successfully ==============")
-        
     def record_multi_camera_to_zarr(
         self,
         output_zarr_paths: list,
@@ -95,7 +98,7 @@ def main(cfg: DictConfig):
     if cfg.camera_mode == "record":
         if cfg.mode == "is_multi":
             """ Assuming 2 cameras """
-            multi_driver = MultiCameraDriver(camera_indices=[cfg.is_multi.record.camera_index_1, cfg.is_multi.record.camera_index_2])  # 假设有两个相机
+            multi_driver = MultiCameraDriver(camera_indices=[cfg.is_multi.record.camera_index_1, cfg.is_multi.record.camera_index_2], is_realsense=bool(cfg.is_multi.record.REALSENSE))  # 假设有两个相机
 
             output_zarr_paths = [
                 os.path.join("data", "multi_cameras", cfg.is_multi.record.sensor_name_1, cfg.is_multi.record.category),
